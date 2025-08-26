@@ -9,6 +9,7 @@ def home():
     <html>
         <head>
             <title>Flask Demo App</title>
+            
             <style>
                 body { 
                     font-family: Arial, sans-serif; 
