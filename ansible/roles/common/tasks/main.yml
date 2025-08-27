@@ -1,0 +1,38 @@
+---
+- name: Update package cache
+  dnf:
+    update_cache: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Install essential packages
+  dnf:
+    name:
+      - python3-pip
+      - git
+      - vim
+      - wget
+      - curl
+      - unzip
+      - htop
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Create devops user
+  user:
+    name: devops
+    shell: /bin/bash
+    groups: wheel
+    append: yes
+
+- name: Set up SSH key for devops user
+  authorized_key:
+    user: devops
+    state: present
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+- name: Configure sudo for devops user
+  lineinfile:
+    path: /etc/sudoers
+    line: "devops ALL=(ALL) NOPASSWD:ALL"
+    state: present
+    validate: "visudo -cf %s"

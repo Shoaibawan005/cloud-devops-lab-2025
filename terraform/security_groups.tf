@@ -8,6 +8,7 @@ resource "aws_security_group" "bastion_sg" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = [var.your_ip_cidr]
+    description = "SSH from your IP only"
   }
 
   egress {
@@ -15,6 +16,7 @@ resource "aws_security_group" "bastion_sg" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "All outbound traffic"
   }
 
   tags = {
@@ -34,6 +36,22 @@ resource "aws_security_group" "app_sg" {
     to_port         = 22
     protocol        = "tcp"
     security_groups = [aws_security_group.bastion_sg.id]
+  }
+
+  ingress {
+    from_port       = 5000
+    to_port         = 5000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion_sg.id]
+    description     = "Flask app from bastion only"
+  }
+
+  ingress {
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion_sg.id]
+    description     = "Jenkins from bastion only"
   }
 
   # Optionally open Flask app port (e.g., 5000) from bastion/VPC

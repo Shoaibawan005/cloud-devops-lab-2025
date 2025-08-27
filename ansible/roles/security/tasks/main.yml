@@ -1,0 +1,41 @@
+---
+- name: Install UFW
+  dnf:
+    name: ufw
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Configure UFW default policies
+  ufw:
+    direction: incoming
+    policy: deny
+  become: yes
+
+- name: Allow SSH
+  ufw:
+    rule: allow
+    port: ssh
+    proto: tcp
+  become: yes
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+    policy: deny
+  become: yes
+
+- name: Disable root SSH login
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin no'
+    state: present
+  notify: restart sshd
+
+- name: Disable password authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication no'
+    state: present
+  notify: restart sshd
