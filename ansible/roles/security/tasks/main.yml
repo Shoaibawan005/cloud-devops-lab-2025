@@ -1,41 +1,94 @@
----
-- name: Install UFW
-  dnf:
-    name: ufw
+
+- name: Install Fail2Ban
+  become: yes
+  package:
+    name: fail2ban
     state: present
-  when: ansible_os_family == "RedHat"
 
-- name: Configure UFW default policies
-  ufw:
-    direction: incoming
-    policy: deny
+- name: Configure Fail2Ban jail.local
   become: yes
+  copy:
+    dest: /etc/fail2ban/jail.local
+    content: |
+      [DEFAULT]
+      bantime = 3600
+      findtime = 600
+      maxretry = 5
+      backend = systemd
 
-- name: Allow SSH
-  ufw:
-    rule: allow
-    port: ssh
-    proto: tcp
-  become: yes
+      [sshd]
+      enabled = true
+      port    = ssh
+      logpath = %(sshd_log)s
+      maxretry = 5
 
-- name: Enable UFW
-  ufw:
-    state: enabled
-    policy: deny
+- name: Restart Fail2Ban service
   become: yes
+  service:
+    name: fail2ban
+    state: restarted
+    enabled: yes
 
 - name: Disable root SSH login
+  become: yes
   lineinfile:
     path: /etc/ssh/sshd_config
     regexp: '^#?PermitRootLogin'
     line: 'PermitRootLogin no'
     state: present
-  notify: restart sshd
 
 - name: Disable password authentication
+  become: yes
   lineinfile:
     path: /etc/ssh/sshd_config
     regexp: '^#?PasswordAuthentication'
     line: 'PasswordAuthentication no'
     state: present
-  notify: restart sshd
+
+- name: Restart SSH service
+  become: yes
+  service:
+    name: sshd
+    state: restarted
+
+
+# - name: Install UFW
+#   dnf:
+#     name: ufw
+#     state: present
+#   when: ansible_os_family == "RedHat"
+
+# - name: Configure UFW default policies
+#   ufw:
+#     direction: incoming
+#     policy: deny
+#   become: yes
+
+# - name: Allow SSH
+#   ufw:
+#     rule: allow
+#     port: ssh
+#     proto: tcp
+#   become: yes
+
+# - name: Enable UFW
+#   ufw:
+#     state: enabled
+#     policy: deny
+#   become: yes
+
+# - name: Disable root SSH login
+#   lineinfile:
+#     path: /etc/ssh/sshd_config
+#     regexp: '^#?PermitRootLogin'
+#     line: 'PermitRootLogin no'
+#     state: present
+#   notify: restart sshd
+
+# - name: Disable password authentication
+#   lineinfile:
+#     path: /etc/ssh/sshd_config
+#     regexp: '^#?PasswordAuthentication'
+#     line: 'PasswordAuthentication no'
+#     state: present
+#   notify: restart sshd

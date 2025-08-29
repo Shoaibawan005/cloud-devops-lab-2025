@@ -17,11 +17,19 @@ resource "aws_instance" "bastion" {
   key_name                    = var.key_name
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
 
+  root_block_device {
+    volume_size = var.root_volume_size_gb
+    volume_type = "gp3"
+    encrypted   = true
+    delete_on_termination = true
+  }
+
   tags = {
     Name    = "${var.project}-${var.env}-bastion"
     Project = var.project
     Env     = var.env
   }
+
 }
 
 resource "aws_instance" "app" {
@@ -31,6 +39,13 @@ resource "aws_instance" "app" {
   vpc_security_group_ids = [aws_security_group.app_sg.id]
   key_name               = var.key_name
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
+  
+  root_block_device {
+    volume_size = var.root_volume_size_gb
+    volume_type = "gp3"
+    encrypted   = true
+    delete_on_termination = true
+  } 
 
   # Optional: user_data to install Python/Flask or pull code
   # user_data = file("${path.module}/user_data_app.sh")
@@ -40,4 +55,5 @@ resource "aws_instance" "app" {
     Project = var.project
     Env     = var.env
   }
+ 
 }

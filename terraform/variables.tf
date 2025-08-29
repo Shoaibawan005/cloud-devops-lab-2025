@@ -45,3 +45,9 @@ variable "your_ip_cidr" {
   type        = string
   description = "Your public IP in CIDR form for SSH to bastion (e.g., 1.2.3.4/32)"
 }
+
+variable "root_volume_size_gb" {
+  type        = number
+  description = "Root EBS volume size (GiB) for EC2 instances"
+  default     = 10
+}

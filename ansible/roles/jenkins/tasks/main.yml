@@ -1,11 +1,16 @@
----
-- name: Install Java
+- name: Install Java 17 on RedHat
   dnf:
-    name: java-11-openjdk
+    name: java-17-openjdk-devel
     state: present
-  when: ansible_os_family == "RedHat"
+  when: ansible_os_family == "RedHat" and ansible_distribution != "Amazon"
 
-- name: Add Jenkins repository
+- name: Install Java 17 (Amazon Corretto) on Amazon Linux
+  dnf:
+    name: java-17-amazon-corretto
+    state: present
+  when: ansible_distribution == "Amazon"
+
+- name: Add Jenkins repository key
   rpm_key:
     key: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
     state: present
@@ -23,22 +28,119 @@
     state: present
   when: ansible_os_family == "RedHat"
 
+- name: Ensure systemd override directory exists
+  file:
+    path: /etc/systemd/system/jenkins.service.d
+    state: directory
+
+- name: Set JAVA_HOME for Jenkins (Java 17)
+  copy:
+    dest: /etc/systemd/system/jenkins.service.d/java17.conf
+    content: |
+      [Service]
+      Environment="JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto"
+      Environment="PATH=/usr/lib/jvm/java-17-amazon-corretto/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+
+- name: Reload systemd daemon
+  command: systemctl daemon-reexec
+  become: yes
+
 - name: Start and enable Jenkins
   systemd:
     name: jenkins
-    state: started
+    state: restarted
     enabled: yes
+    daemon_reload: yes
 
 - name: Get Jenkins initial admin password
   shell: cat /var/lib/jenkins/secrets/initialAdminPassword
   register: jenkins_password
   changed_when: false
 
-- name: Store Jenkins password in SSM
-  aws_ssm_parameter:
-    name: "/{{ project }}/{{ env }}/jenkins/initial-password"
-    value: "{{ jenkins_password.stdout }}"
-    type: "SecureString"
-    region: "{{ aws_region }}"
-  delegate_to: localhost
-  become: no
+# Optional: Store Jenkins password in AWS SSM via Ansible module
+# - name: Store Jenkins password in SSM
+#   community.aws.aws_ssm_parameter:
+#     name: "/{{ project }}/{{ env }}/jenkins/initial-password"
+#     value: "{{ jenkins_password.stdout }}"
+#     type: "SecureString"
+#     region: "{{ aws_region }}"
+#   delegate_to: localhost
+#   become: no
+
+# - name: Store Jenkins password in SSM via API
+#   uri:
+#     url: "https://ssm.{{ aws_region | default('eu-north-1') }}.amazonaws.com/"
+#     method: POST
+#     headers:
+#       Content-Type: application/x-amz-json-1.1
+#       X-Amz-Target: AmazonSSM.PutParameter
+#     body_format: json
+#     body: |
+#       {
+#         "Name": "/{{ project  | default('devops') }}/{{ env  | default('dev' )}}/jenkins/initial-password",
+#         "Type": "SecureString",
+#         "Value": "{{ jenkins_password.stdout }}",
+#         "Overwrite": true
+#       }
+#     status_code: 200
+#   delegate_to: localhost
+#   run_once: true
+#   become: no
+#   vars:
+#     ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+# - name: Install Java
+#   dnf:
+#     name: java-11-openjdk
+#     state: present
+#   when: ansible_os_family == "RedHat"
+
+# - name: Add Jenkins repository
+#   rpm_key:
+#     key: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+#     state: present
+
+# - name: Add Jenkins repository
+#   yum_repository:
+#     name: jenkins
+#     description: Jenkins repository
+#     baseurl: https://pkg.jenkins.io/redhat-stable/
+#     gpgcheck: yes
+
+# - name: Install Jenkins
+#   dnf:
+#     name: jenkins
+#     state: present
+#   when: ansible_os_family == "RedHat"
+
+# - name: Start and enable Jenkins
+#   systemd:
+#     name: jenkins
+#     state: started
+#     enabled: yes
+
+# - name: Get Jenkins initial admin password
+#   shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+#   register: jenkins_password
+#   changed_when: false
+
+# - name: Store Jenkins password in SSM via API
+#   uri:
+#     url: "https://ssm.{{ aws_region }}.amazonaws.com/"
+#     method: POST
+#     headers:
+#       Content-Type: application/x-amz-json-1.1
+#       X-Amz-Target: AmazonSSM.PutParameter
+#     body_format: json
+#     body: |
+#       {
+#         "Name": "/{{ project }}/{{ env }}/jenkins/initial-password",
+#         "Type": "SecureString",
+#         "Value": "{{ jenkins_password.stdout }}",
+#         "Overwrite": true
+#       }
+#     status_code: 200
+#   delegate_to: localhost
+#   run_once: true
+#   vars:
+#     ansible_python_interpreter: "{{ ansible_playbook_python }}"

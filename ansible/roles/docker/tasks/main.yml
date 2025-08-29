@@ -1,9 +1,8 @@
----
+
 - name: Install Docker
   dnf:
     name:
       - docker
-      - docker-compose
     state: present
   when: ansible_os_family == "RedHat"
 
@@ -19,8 +18,46 @@
     groups: docker
     append: yes
 
-- name: Install Docker Compose
+# Install Docker Compose v2 (recommended)
+- name: Install Docker Compose binary
   get_url:
-    url: https://github.com/docker/compose/releases/latest/download/docker-compose-Linux-x86_64
+    url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
     dest: /usr/local/bin/docker-compose
     mode: '0755'
+  become: yes
+
+- name: Verify docker-compose installation
+  command: docker-compose --version
+  register: compose_version
+  changed_when: false
+
+- name: Show docker-compose version
+  debug:
+    msg: "{{ compose_version.stdout }}"
+
+
+# - name: Install Docker
+#   dnf:
+#     name:
+#       - docker
+#       - docker-compose
+#     state: present
+#   when: ansible_os_family == "RedHat"
+
+# - name: Start and enable Docker service
+#   systemd:
+#     name: docker
+#     state: started
+#     enabled: yes
+
+# - name: Add devops user to docker group
+#   user:
+#     name: devops
+#     groups: docker
+#     append: yes
+
+# - name: Install Docker Compose
+#   get_url:
+#     url: https://github.com/docker/compose/releases/latest/download/docker-compose-Linux-x86_64
+#     dest: /usr/local/bin/docker-compose
+#     mode: '0755'

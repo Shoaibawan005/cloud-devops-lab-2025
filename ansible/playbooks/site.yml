@@ -1,7 +1,13 @@
----
+
 - name: Configure all servers
   hosts: all
   become: yes
+  pre_tasks:
+    - name: Ensure full curl is installed (replaces curl-minimal)
+      ansible.builtin.yum:
+        name: curl
+        state: present
+        allowerasing: yes
   roles:
     - common
     - security
@@ -9,12 +15,24 @@
 - name: Configure bastion server
   hosts: bastion
   become: yes
+  pre_tasks:
+    - name: Ensure full curl is installed (replaces curl-minimal)
+      ansible.builtin.yum:
+        name: curl
+        state: present
+        allowerasing: yes
   roles:
     - docker
 
 - name: Configure app server
   hosts: app
   become: yes
+  pre_tasks:
+    - name: Ensure full curl is installed (replaces curl-minimal)
+      ansible.builtin.yum:
+        name: curl
+        state: present
+        allowerasing: yes
   roles:
     - docker
     - jenkins
